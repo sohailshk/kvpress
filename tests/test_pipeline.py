@@ -9,7 +9,7 @@ import torch
 from transformers import AutoTokenizer, DynamicCache, QuantizedCache
 from transformers.utils import is_flash_attn_2_available, is_hqq_available, is_optimum_quanto_available
 
-from kvpress import ExpectedAttentionPress, KVzipPress
+from kvpress import DMSPress, ExpectedAttentionPress, KnormPress, KVzipPress
 from kvpress.pipeline import KVPressTextGenerationPipeline
 from tests.fixtures import danube_500m_model  # noqa: F401
 from tests.fixtures import kv_press_danube_pipeline  # noqa: F401
@@ -41,6 +41,12 @@ def test_pipeline_with_cache(kv_press_unit_test_pipeline):  # noqa: F811
 
     assert len(answers) == 1
     assert isinstance(answers[0], str)
+
+
+def test_pipeline_dms_decoding_rejects_multiple_questions(kv_press_unit_test_pipeline):  # noqa: F811
+    press = DMSPress(KnormPress(), threshold=-0.5, decoding=True)
+    with pytest.raises(ValueError, match="multiple questions"):
+        kv_press_unit_test_pipeline("This is a test article.", questions=["Who?", "When?"], press=press)
 
 
 class TestPipelineFA2:

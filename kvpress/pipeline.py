@@ -199,9 +199,14 @@ class KVPressTextGenerationPipeline(Pipeline):
         list[str]
             Generated answers for each input question.
         """
-        if isinstance(press, (DecodingPress, PrefillDecodingPress)) and len(input_tensors["questions_ids"]) > 1:
+        # We only perform decoding compression if the press is a decoding or prefill decoding press
+        perform_decoding_compression = press is not None and isinstance(press, (DecodingPress, PrefillDecodingPress))
+        if isinstance(press, DMSPress):
+            perform_decoding_compression = press.decoding
+        if perform_decoding_compression and len(input_tensors["questions_ids"]) > 1:
             raise ValueError(
-                "DecodingPress is not compatible with multiple questions. Please specify a single question."
+                f"{type(press).__name__} compresses during decoding and is not compatible with multiple questions. "
+                "Please specify a single question."
             )
 
         context_ids = input_tensors["context_ids"].to(self.model.device)
@@ -226,10 +231,6 @@ class KVPressTextGenerationPipeline(Pipeline):
         if isinstance(press, RestoreKVPress):
             context_length = cache.get_seq_length()
 
-        # We only perform decoding compression if the press is a decoding or prefill decoding press
-        perform_decoding_compression = press is not None and isinstance(press, (DecodingPress, PrefillDecodingPress))
-        if isinstance(press, DMSPress):
-            perform_decoding_compression = press.decoding
         with press(self.model) if perform_decoding_compression else contextlib.nullcontext():
             # Greedy decoding for each question
             answers = []
