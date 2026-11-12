@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 1993-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import pandas as pd
 import pytest
 
 from evaluation.benchmarks.aime25.calculate_metrics import score_aime as score_aime25
@@ -43,3 +44,14 @@ def test_aime25_scores_last_boxed_answer():
 
 def test_math500_scores_first_boxed_answer():
     assert score_math500(r"First: \boxed{\frac{1}{2}}. Later: \boxed{1}.", r"\frac{1}{2}")
+
+
+@pytest.mark.parametrize("predicted_answer", ["", " \n", "..."])
+def test_needle_in_haystack_answer_without_words_scores_zero(predicted_answer):
+    pytest.importorskip("rouge")
+    from evaluation.benchmarks.needle_in_haystack.calculate_metrics import calculate_metrics
+
+    df = pd.DataFrame({"needle": ["The secret number is 42"], "predicted_answer": [predicted_answer]})
+    zero = {"r": 0.0, "p": 0.0, "f": 0.0}
+
+    assert calculate_metrics(df) == [{"rouge-1": zero, "rouge-2": zero, "rouge-l": zero}]
